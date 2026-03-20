@@ -6,6 +6,7 @@ import com.gostock.entity.CashFlow;
 import com.gostock.entity.enums.CashFlowType;
 import com.gostock.repository.AccountRepository;
 import com.gostock.repository.CashFlowRepository;
+import com.gostock.service.contract.CashFlowServiceContract;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -28,11 +29,12 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CashFlowService {
+public class CashFlowService implements CashFlowServiceContract {
 
     private final CashFlowRepository cashFlowRepo;
     private final AccountRepository accountRepo;
 
+    @Override
     public CashFlow create(CashFlowRequest req) {
         Account account = accountRepo.findById(req.getAccountId())
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + req.getAccountId()));
@@ -62,11 +64,13 @@ public class CashFlowService {
         return saved;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<CashFlow> listByAccount(Long accountId) {
         return cashFlowRepo.findByAccount_IdOrderByFlowDateDesc(accountId);
     }
 
+    @Override
     public List<CashFlow> importFromExcel(MultipartFile file, Long accountId) throws IOException {
         accountRepo.findById(accountId)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + accountId));

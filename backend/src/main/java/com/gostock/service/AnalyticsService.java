@@ -4,6 +4,7 @@ import com.gostock.dto.*;
 import com.gostock.entity.*;
 import com.gostock.entity.enums.CashFlowType;
 import com.gostock.repository.*;
+import com.gostock.service.contract.AnalyticsServiceContract;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class AnalyticsService {
+public class AnalyticsService implements AnalyticsServiceContract {
 
     private final PositionRepository positionRepo;
     private final AccountRepository accountRepo;
@@ -27,6 +28,7 @@ public class AnalyticsService {
 
     // ── Portfolio Summary (Holdings + Performance + Allocation) ──────────
 
+        @Override
     @Transactional(readOnly = true)
     public PortfolioSummaryResponse getSummary(Long accountId) {
         accountRepo.findById(accountId)
@@ -111,6 +113,7 @@ public class AnalyticsService {
 
     // ── Cash Summary ─────────────────────────────────────────────────────
 
+        @Override
     @Transactional(readOnly = true)
     public CashSummaryResponse getCashSummary(Long accountId) {
         Account account = accountRepo.findById(accountId)

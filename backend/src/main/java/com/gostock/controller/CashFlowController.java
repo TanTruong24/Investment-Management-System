@@ -2,7 +2,7 @@ package com.gostock.controller;
 
 import com.gostock.dto.CashFlowRequest;
 import com.gostock.entity.CashFlow;
-import com.gostock.service.CashFlowService;
+import com.gostock.service.contract.CashFlowServiceContract;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CashFlowController {
 
-    private final CashFlowService cashFlowService;
+    private final CashFlowServiceContract cashFlowService;
 
     /** Nạp tiền hoặc rút tiền */
     @PostMapping

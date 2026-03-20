@@ -4,6 +4,7 @@ import com.gostock.dto.*;
 import com.gostock.entity.*;
 import com.gostock.entity.enums.*;
 import com.gostock.repository.*;
+import com.gostock.service.contract.TransactionServiceContract;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -29,7 +30,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class TransactionService {
+public class TransactionService implements TransactionServiceContract {
 
     private static final BigDecimal TAX_RATE = new BigDecimal("0.001"); // 0.1% thuế bán
 
@@ -41,6 +42,7 @@ public class TransactionService {
 
     // ── Tạo giao dịch ────────────────────────────────────────────────────
 
+    @Override
     public TransactionResponse create(TransactionRequest req) {
         Account account = accountRepo.findById(req.getAccountId())
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + req.getAccountId()));
@@ -55,6 +57,7 @@ public class TransactionService {
 
     // ── Sửa giao dịch ────────────────────────────────────────────────────
 
+    @Override
     public TransactionResponse update(Long id, TransactionRequest req) {
         Transaction tx = transactionRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found: " + id));
@@ -70,9 +73,13 @@ public class TransactionService {
     // ── Xem danh sách (phân trang, lọc, sắp xếp) ────────────────────────
 
     @Transactional(readOnly = true)
+    @Override
     public Page<TransactionResponse> search(String tickerSymbol, TradeType trade,
-                                            LocalDate fromDate, LocalDate toDate,
-                                            Long accountId, Pageable pageable) {
+            LocalDate fromDate, LocalDate toDate,
+            Long accountId, Pageable pageable) {
+        
+        int debug1 = 1;
+        System.out.println("HIT SERVICE SEARCH");
         List<Transaction> all = transactionRepo.search(tickerSymbol, trade, fromDate, toDate, accountId);
 
         // manual paging (vì JPQL + Pageable + countQuery phức tạp)
@@ -84,18 +91,23 @@ public class TransactionService {
 
     // ── Import từ Excel ───────────────────────────────────────────────────
 
+    @Override
     public List<TransactionResponse> importFromExcel(MultipartFile file, Long accountId) throws IOException {
         return importByType(file, accountId, null);
     }
 
-    public List<TransactionResponse> importStockTransactionHistoryExcel(MultipartFile file, Long accountId) throws IOException {
+    @Override
+    public List<TransactionResponse> importStockTransactionHistoryExcel(MultipartFile file, Long accountId)
+            throws IOException {
         return importByType(file, accountId, ImportSheetType.STOCK_TRANSACTION_HISTORY);
     }
 
+    @Override
     public List<TransactionResponse> importFundStatementExcel(MultipartFile file, Long accountId) throws IOException {
         return importByType(file, accountId, ImportSheetType.FUND_STATEMENT);
     }
 
+    @Override
     public List<TransactionResponse> importStockStatementExcel(MultipartFile file, Long accountId) throws IOException {
         return importByType(file, accountId, ImportSheetType.STOCK_STATEMENT);
     }
@@ -138,22 +150,27 @@ public class TransactionService {
 
         for (int i = headerRow + 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
 
             String symbol = normalizeSymbol(getCellString(row, 0, formatter));
-            if (symbol == null) continue;
+            if (symbol == null)
+                continue;
 
             LocalDate tradingDate = getCellDate(row, 1, formatter);
-            if (tradingDate == null) continue;
+            if (tradingDate == null)
+                continue;
 
             TradeType trade = parseTrade(getCellString(row, 2, formatter), null);
-            if (trade == null) continue;
+            if (trade == null)
+                continue;
 
             long volume = parseLongCell(row, 5, formatter, 0L);
             if (volume <= 0) {
                 volume = parseLongCell(row, 3, formatter, 0L);
             }
-            if (volume <= 0) continue;
+            if (volume <= 0)
+                continue;
 
             BigDecimal orderPrice = parseDecimalCell(row, 4, formatter, BigDecimal.ZERO);
             BigDecimal matchedPrice = parseDecimalCell(row, 6, formatter, BigDecimal.ZERO);
@@ -163,13 +180,15 @@ public class TransactionService {
             if (orderPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 orderPrice = matchedPrice;
             }
-            if (matchedPrice.compareTo(BigDecimal.ZERO) <= 0) continue;
+            if (matchedPrice.compareTo(BigDecimal.ZERO) <= 0)
+                continue;
 
             String orderNo = getCellString(row, 15, formatter);
             if (orderNo == null) {
                 orderNo = syntheticOrderNo("STX", tradingDate, symbol, trade, volume, i);
             }
-            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId())) continue;
+            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId()))
+                continue;
 
             Ticker ticker = findOrCreateTicker(symbol, InstrumentType.STOCK);
 
@@ -207,22 +226,28 @@ public class TransactionService {
 
         for (int i = headerRow + 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
 
             String symbol = normalizeSymbol(getCellString(row, 0, formatter));
-            if (symbol == null) continue;
+            if (symbol == null)
+                continue;
 
             TradeType trade = parseTrade(getCellString(row, 1, formatter), null);
-            if (trade == null) continue;
+            if (trade == null)
+                continue;
 
             LocalDate tradingDate = getCellDate(row, 2, formatter);
-            if (tradingDate == null) continue;
+            if (tradingDate == null)
+                continue;
 
             BigDecimal rawVolume = parseDecimalCell(row, 4, formatter, BigDecimal.ZERO).abs();
-            if (rawVolume.compareTo(BigDecimal.ZERO) <= 0) continue;
+            if (rawVolume.compareTo(BigDecimal.ZERO) <= 0)
+                continue;
 
             long volume = rawVolume.setScale(0, RoundingMode.HALF_UP).longValue();
-            if (volume <= 0) volume = 1L;
+            if (volume <= 0)
+                volume = 1L;
 
             BigDecimal unitPrice = parseDecimalCell(row, 3, formatter, BigDecimal.ZERO);
             if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
@@ -231,10 +256,12 @@ public class TransactionService {
                     unitPrice = totalAmount.divide(rawVolume, 2, RoundingMode.HALF_UP);
                 }
             }
-            if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) continue;
+            if (unitPrice.compareTo(BigDecimal.ZERO) <= 0)
+                continue;
 
             String orderNo = syntheticOrderNo("FND", tradingDate, symbol, trade, volume, i);
-            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId())) continue;
+            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId()))
+                continue;
 
             Ticker ticker = findOrCreateTicker(symbol, InstrumentType.FUND_CERTIFICATE);
 
@@ -252,7 +279,8 @@ public class TransactionService {
             req.setOrderType(OrderType.NORMAL);
             req.setOrderNo(orderNo);
             req.setChannel("FUND");
-            req.setNote("Imported from FUND STATEMENT: " + Optional.ofNullable(getCellString(row, 7, formatter)).orElse(""));
+            req.setNote("Imported from FUND STATEMENT: "
+                    + Optional.ofNullable(getCellString(row, 7, formatter)).orElse(""));
 
             tryImportCreate(results, req);
         }
@@ -271,25 +299,32 @@ public class TransactionService {
 
         for (int i = headerRow + 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
 
             String symbol = normalizeSymbol(getCellString(row, 0, formatter));
-            if (symbol == null) continue;
+            if (symbol == null)
+                continue;
 
             LocalDate tradingDate = getCellDate(row, 1, formatter);
-            if (tradingDate == null) continue;
+            if (tradingDate == null)
+                continue;
 
             BigDecimal signedVolume = parseDecimalCell(row, 3, formatter, BigDecimal.ZERO);
-            if (signedVolume.compareTo(BigDecimal.ZERO) == 0) continue;
+            if (signedVolume.compareTo(BigDecimal.ZERO) == 0)
+                continue;
 
             TradeType trade = parseTrade(getCellString(row, 2, formatter), signedVolume);
-            if (trade == null) continue;
+            if (trade == null)
+                continue;
 
             long volume = signedVolume.abs().setScale(0, RoundingMode.HALF_UP).longValue();
-            if (volume <= 0) continue;
+            if (volume <= 0)
+                continue;
 
             String orderNo = syntheticOrderNo("STM", tradingDate, symbol, trade, volume, i);
-            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId())) continue;
+            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId()))
+                continue;
 
             Ticker ticker = findOrCreateTicker(symbol, InstrumentType.STOCK);
             BigDecimal approxPrice = resolveApproxPriceForStatement(account.getId(), ticker, trade);
@@ -309,7 +344,8 @@ public class TransactionService {
             req.setOrderNo(orderNo);
             req.setChannel("STATEMENT");
             req.setStockExchange(ticker.getExchange());
-            req.setNote("Imported from STOCK STATEMENT: " + Optional.ofNullable(getCellString(row, 4, formatter)).orElse(""));
+            req.setNote("Imported from STOCK STATEMENT: "
+                    + Optional.ofNullable(getCellString(row, 4, formatter)).orElse(""));
 
             tryImportCreate(results, req);
         }
@@ -332,12 +368,15 @@ public class TransactionService {
 
         for (int i = 0; i <= last; i++) {
             Row row = sheet.getRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
             short maxCell = row.getLastCellNum();
-            if (maxCell < 0) continue;
+            if (maxCell < 0)
+                continue;
             for (int c = 0; c < maxCell; c++) {
                 String val = getCellString(row, c, formatter);
-                if (val != null) sb.append(' ').append(normalizeToken(val));
+                if (val != null)
+                    sb.append(' ').append(normalizeToken(val));
             }
         }
 
@@ -363,20 +402,24 @@ public class TransactionService {
 
         for (int i = 0; i <= last; i++) {
             Row row = sheet.getRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
             StringBuilder line = new StringBuilder();
             short maxCell = row.getLastCellNum();
-            if (maxCell < 0) continue;
+            if (maxCell < 0)
+                continue;
 
             for (int c = 0; c < maxCell; c++) {
                 String val = getCellString(row, c, formatter);
-                if (val != null) line.append(' ').append(normalizeToken(val));
+                if (val != null)
+                    line.append(' ').append(normalizeToken(val));
             }
 
             String normalizedLine = line.toString();
             int matched = 0;
             for (String token : headerTokens) {
-                if (normalizedLine.contains(normalizeToken(token))) matched++;
+                if (normalizedLine.contains(normalizeToken(token)))
+                    matched++;
             }
             if (matched >= Math.max(3, headerTokens.length - 1)) {
                 return i;
@@ -429,38 +472,49 @@ public class TransactionService {
     private TradeType parseTrade(String rawTrade, BigDecimal signedVolume) {
         String token = normalizeToken(rawTrade);
         if (token != null) {
-            if (token.contains("buy") || token.contains("mua") || token.contains("nhan")) return TradeType.BUY;
-            if (token.contains("sell") || token.contains("ban") || token.contains("rut") || token.contains("tra")) return TradeType.SELL;
+            if (token.contains("buy") || token.contains("mua") || token.contains("nhan"))
+                return TradeType.BUY;
+            if (token.contains("sell") || token.contains("ban") || token.contains("rut") || token.contains("tra"))
+                return TradeType.SELL;
         }
 
         if (signedVolume != null) {
-            if (signedVolume.compareTo(BigDecimal.ZERO) > 0) return TradeType.BUY;
-            if (signedVolume.compareTo(BigDecimal.ZERO) < 0) return TradeType.SELL;
+            if (signedVolume.compareTo(BigDecimal.ZERO) > 0)
+                return TradeType.BUY;
+            if (signedVolume.compareTo(BigDecimal.ZERO) < 0)
+                return TradeType.SELL;
         }
         return null;
     }
 
     private OrderType parseOrderType(String rawOrderType) {
         String token = normalizeToken(rawOrderType);
-        if (token == null) return OrderType.NORMAL;
-        if (token.contains("phaisinh") || token.contains("derivative")) return OrderType.DERIVATIVE;
+        if (token == null)
+            return OrderType.NORMAL;
+        if (token.contains("phaisinh") || token.contains("derivative"))
+            return OrderType.DERIVATIVE;
         return OrderType.NORMAL;
     }
 
-    private String syntheticOrderNo(String prefix, LocalDate date, String symbol, TradeType trade, long volume, int rowIndex) {
+    private String syntheticOrderNo(String prefix, LocalDate date, String symbol, TradeType trade, long volume,
+            int rowIndex) {
         return "%s-%s-%s-%s-%d-%d".formatted(prefix, date, symbol, trade.name(), volume, rowIndex + 1);
     }
 
     private String normalizeSymbol(String symbol) {
-        if (symbol == null) return null;
+        if (symbol == null)
+            return null;
         String trimmed = symbol.trim().toUpperCase(Locale.ROOT);
-        if (trimmed.isEmpty()) return null;
-        if (trimmed.contains("TICKER") || trimmed.contains("MÃ") || trimmed.contains("MA")) return null;
+        if (trimmed.isEmpty())
+            return null;
+        if (trimmed.contains("TICKER") || trimmed.contains("MÃ") || trimmed.contains("MA"))
+            return null;
         return trimmed;
     }
 
     private String normalizeToken(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
@@ -470,29 +524,32 @@ public class TransactionService {
 
     private String getCellString(Row row, int col, DataFormatter formatter) {
         Cell cell = row.getCell(col);
-        if (cell == null) return null;
+        if (cell == null)
+            return null;
         String raw = formatter.formatCellValue(cell);
-        if (raw == null) return null;
+        if (raw == null)
+            return null;
         String trimmed = raw.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private LocalDate getCellDate(Row row, int col, DataFormatter formatter) {
         Cell cell = row.getCell(col);
-        if (cell == null) return null;
+        if (cell == null)
+            return null;
 
         if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
             return cell.getLocalDateTimeCellValue().toLocalDate();
         }
 
         String raw = getCellString(row, col, formatter);
-        if (raw == null) return null;
+        if (raw == null)
+            return null;
 
         List<DateTimeFormatter> formats = List.of(
                 DateTimeFormatter.ofPattern("d/M/uuuu"),
                 DateTimeFormatter.ofPattern("dd/MM/uuuu"),
-                DateTimeFormatter.ofPattern("uuuu-MM-dd")
-        );
+                DateTimeFormatter.ofPattern("uuuu-MM-dd"));
         for (DateTimeFormatter f : formats) {
             try {
                 return LocalDate.parse(raw, f);
@@ -505,13 +562,15 @@ public class TransactionService {
 
     private long parseLongCell(Row row, int col, DataFormatter formatter, long defaultValue) {
         BigDecimal number = parseDecimalCell(row, col, formatter, null);
-        if (number == null) return defaultValue;
+        if (number == null)
+            return defaultValue;
         return number.setScale(0, RoundingMode.HALF_UP).longValue();
     }
 
     private BigDecimal parseDecimalCell(Row row, int col, DataFormatter formatter, BigDecimal defaultValue) {
         String raw = getCellString(row, col, formatter);
-        if (raw == null) return defaultValue;
+        if (raw == null)
+            return defaultValue;
 
         String normalized = raw.trim();
         boolean negativeByParen = normalized.startsWith("(") && normalized.endsWith(")");
@@ -524,7 +583,8 @@ public class TransactionService {
         // Hỗ trợ format 28,400 hoặc 44,245.94
         normalized = normalized.replace(",", "");
 
-        if (normalized.isBlank() || "-".equals(normalized)) return defaultValue;
+        if (normalized.isBlank() || "-".equals(normalized))
+            return defaultValue;
         try {
             BigDecimal val = new BigDecimal(normalized);
             return negativeByParen ? val.negate() : val;
@@ -554,7 +614,8 @@ public class TransactionService {
     // ── Internal helpers ──────────────────────────────────────────────────
 
     private Transaction buildTransaction(TransactionRequest req, Account account, Ticker ticker) {
-        BigDecimal matchedVol = BigDecimal.valueOf(req.getMatchedVolume() != null ? req.getMatchedVolume() : req.getVolume());
+        BigDecimal matchedVol = BigDecimal
+                .valueOf(req.getMatchedVolume() != null ? req.getMatchedVolume() : req.getVolume());
         BigDecimal matchedPrice = req.getMatchedValue() != null ? req.getMatchedValue() : req.getOrderPrice();
         BigDecimal tradeValue = matchedVol.multiply(matchedPrice);
 
@@ -562,7 +623,8 @@ public class TransactionService {
                 : tradeValue.multiply(account.getBroker().getDefaultFeeRate()).setScale(0, RoundingMode.HALF_UP);
 
         BigDecimal tax = req.getTax() != null ? req.getTax()
-                : (req.getTrade() == TradeType.SELL ? tradeValue.multiply(TAX_RATE).setScale(0, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+                : (req.getTrade() == TradeType.SELL ? tradeValue.multiply(TAX_RATE).setScale(0, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO);
 
         BigDecimal cost = req.getTrade() == TradeType.BUY
                 ? tradeValue.add(fee).add(tax)
@@ -606,17 +668,19 @@ public class TransactionService {
 
     /**
      * Cập nhật Position sau khi có giao dịch mới.
-     * BUY:  holdingVolume += matchedVolume, tính lại avgCost theo FIFO bình quân gia quyền.
-     * SELL: holdingVolume -= matchedVolume, tính realized PnL và ghi vào transaction.returnAmount.
+     * BUY: holdingVolume += matchedVolume, tính lại avgCost theo FIFO bình quân gia
+     * quyền.
+     * SELL: holdingVolume -= matchedVolume, tính realized PnL và ghi vào
+     * transaction.returnAmount.
      */
     private void updatePosition(Account account, Ticker ticker, Transaction tx) {
         Position pos = positionRepo.findByAccount_IdAndTicker_Id(account.getId(), ticker.getId())
                 .orElseGet(() -> Position.builder().account(account).ticker(ticker)
-                .holdingVolume(0L)
-                .avgCost(BigDecimal.ZERO)
-                .currentPrice(BigDecimal.ZERO)
-                .unrealizedPnL(BigDecimal.ZERO)
-                .build());
+                        .holdingVolume(0L)
+                        .avgCost(BigDecimal.ZERO)
+                        .currentPrice(BigDecimal.ZERO)
+                        .unrealizedPnL(BigDecimal.ZERO)
+                        .build());
 
         long vol = tx.getMatchedVolume() != null ? tx.getMatchedVolume() : tx.getVolume();
         BigDecimal price = tx.getMatchedValue() != null ? tx.getMatchedValue() : tx.getOrderPrice();

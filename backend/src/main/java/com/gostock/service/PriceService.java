@@ -7,6 +7,7 @@ import com.gostock.entity.Ticker;
 import com.gostock.repository.PositionRepository;
 import com.gostock.repository.PriceHistoryRepository;
 import com.gostock.repository.TickerRepository;
+import com.gostock.service.contract.PriceServiceContract;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class PriceService {
+public class PriceService implements PriceServiceContract {
 
     private final PriceHistoryRepository priceHistoryRepo;
     private final TickerRepository tickerRepo;
@@ -28,6 +29,7 @@ public class PriceService {
     /**
      * Cập nhật/lưu giá mới nhất và đồng bộ vào Position (unrealized PnL).
      */
+    @Override
     public PriceHistory updatePrice(PriceUpdateRequest req) {
         Ticker ticker = tickerRepo.findBySymbolIgnoreCase(req.getTickerSymbol())
                 .orElseThrow(() -> new EntityNotFoundException("Ticker not found: " + req.getTickerSymbol()));

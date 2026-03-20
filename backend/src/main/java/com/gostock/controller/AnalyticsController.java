@@ -1,7 +1,7 @@
 package com.gostock.controller;
 
 import com.gostock.dto.*;
-import com.gostock.service.AnalyticsService;
+import com.gostock.service.contract.AnalyticsServiceContract;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AnalyticsController {
 
-    private final AnalyticsService analyticsService;
+    private final AnalyticsServiceContract analyticsService;
 
     /** Tổng quan danh mục: holdings, PnL, phân bổ, hiệu suất */
     @GetMapping("/portfolio/{accountId}")

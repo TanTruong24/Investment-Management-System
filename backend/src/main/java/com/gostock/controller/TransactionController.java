@@ -2,7 +2,7 @@ package com.gostock.controller;
 
 import com.gostock.dto.*;
 import com.gostock.entity.enums.TradeType;
-import com.gostock.service.TransactionService;
+import com.gostock.service.contract.TransactionServiceContract;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TransactionController {
 
-    private final TransactionService transactionService;
+    private final TransactionServiceContract transactionService;
 
     /** Tạo giao dịch */
     @PostMapping
@@ -52,12 +52,16 @@ public class TransactionController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "tradingDate,desc") String sort) {
 
+
         String[] sortParts = sort.split(",");
         Sort springSort = Sort.by(
                 sortParts.length > 1 && "asc".equalsIgnoreCase(sortParts[1])
                         ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortParts[0]);
         Pageable pageable = PageRequest.of(page, size, springSort);
+
+        int debugController = 1;
+        System.out.println("========== BEFORE CALL SERVICE ==========");
 
         return ResponseEntity.ok(transactionService.search(
                 tickerSymbol, trade, fromDate, toDate, accountId, pageable));
