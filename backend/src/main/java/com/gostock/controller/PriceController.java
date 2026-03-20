@@ -1,7 +1,8 @@
 package com.gostock.controller;
 
 import com.gostock.dto.PriceUpdateRequest;
-import com.gostock.entity.PriceHistory;
+import com.gostock.dto.response.SuccessResponse;
+import com.gostock.dto.response.base.ApiResponse;
 import com.gostock.service.contract.PriceServiceContract;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class PriceController {
 
     /** Cập nhật giá thị trường (thủ công hoặc từ crawler) */
     @PostMapping
-    public ResponseEntity<PriceHistory> updatePrice(@Valid @RequestBody PriceUpdateRequest req) {
-        return ResponseEntity.ok(priceService.updatePrice(req));
+    public ResponseEntity<? extends ApiResponse<?>> updatePrice(@Valid @RequestBody PriceUpdateRequest req) {
+        return ResponseEntity.ok(new SuccessResponse<>(priceService.updatePrice(req)));
     }
 }

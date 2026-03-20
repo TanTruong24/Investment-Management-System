@@ -1,7 +1,8 @@
 package com.gostock.controller;
 
 import com.gostock.dto.CashFlowRequest;
-import com.gostock.entity.CashFlow;
+import com.gostock.dto.response.SuccessResponse;
+import com.gostock.dto.response.base.ApiResponse;
 import com.gostock.service.contract.CashFlowServiceContract;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/cash-flows")
@@ -21,28 +21,28 @@ public class CashFlowController {
 
     /** Nạp tiền hoặc rút tiền */
     @PostMapping
-    public ResponseEntity<CashFlow> create(@Valid @RequestBody CashFlowRequest req) {
-        return ResponseEntity.ok(cashFlowService.create(req));
+    public ResponseEntity<? extends ApiResponse<?>> create(@Valid @RequestBody CashFlowRequest req) {
+        return ResponseEntity.ok(new SuccessResponse<>(cashFlowService.create(req)));
     }
 
     /** Lịch sử nạp/rút tiền của tài khoản */
     @GetMapping
-    public ResponseEntity<List<CashFlow>> listByAccount(@RequestParam Long accountId) {
-        return ResponseEntity.ok(cashFlowService.listByAccount(accountId));
+    public ResponseEntity<? extends ApiResponse<?>> listByAccount(@RequestParam Long accountId) {
+        return ResponseEntity.ok(new SuccessResponse<>(cashFlowService.listByAccount(accountId)));
     }
 
     /** Import sao kê tiền từ file Excel */
     @PostMapping("/import")
-    public ResponseEntity<List<CashFlow>> importExcel(
+    public ResponseEntity<? extends ApiResponse<?>> importExcel(
             @RequestParam Long accountId,
             @RequestParam MultipartFile file) throws IOException {
-        return ResponseEntity.ok(cashFlowService.importFromExcel(file, accountId));
+        return ResponseEntity.ok(new SuccessResponse<>(cashFlowService.importFromExcel(file, accountId)));
     }
 
     @PostMapping("/import/cash-statement")
-    public ResponseEntity<List<CashFlow>> importCashStatement(
+    public ResponseEntity<? extends ApiResponse<?>> importCashStatement(
             @RequestParam Long accountId,
             @RequestParam MultipartFile file) throws IOException {
-        return ResponseEntity.ok(cashFlowService.importFromExcel(file, accountId));
+        return ResponseEntity.ok(new SuccessResponse<>(cashFlowService.importFromExcel(file, accountId)));
     }
 }

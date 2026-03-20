@@ -1,5 +1,7 @@
 package com.gostock.controller;
 
+import com.gostock.dto.response.SuccessResponse;
+import com.gostock.dto.response.base.ApiResponse;
 import com.gostock.entity.Broker;
 import com.gostock.entity.Ticker;
 import com.gostock.entity.Account;
@@ -7,8 +9,6 @@ import com.gostock.service.contract.ReferenceDataServiceContract;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/ref")
@@ -19,43 +19,49 @@ public class ReferenceDataController {
 
     // ── Tickers ──────────────────────────────────────────────────────────
     @GetMapping("/tickers")
-    public List<Ticker> getTickers() { return referenceDataService.getTickers(); }
+    public ResponseEntity<? extends ApiResponse<?>> getTickers() {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.getTickers()));
+    }
 
     @PostMapping("/tickers")
-    public ResponseEntity<Ticker> createTicker(@RequestBody Ticker ticker) {
-        return ResponseEntity.ok(referenceDataService.createTicker(ticker));
+    public ResponseEntity<? extends ApiResponse<?>> createTicker(@RequestBody Ticker ticker) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.createTicker(ticker)));
     }
 
     @PutMapping("/tickers/{id}")
-    public ResponseEntity<Ticker> updateTicker(@PathVariable Long id, @RequestBody Ticker req) {
-        return ResponseEntity.ok(referenceDataService.updateTicker(id, req));
+    public ResponseEntity<? extends ApiResponse<?>> updateTicker(@PathVariable Long id, @RequestBody Ticker req) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.updateTicker(id, req)));
     }
 
     // ── Brokers ──────────────────────────────────────────────────────────
     @GetMapping("/brokers")
-    public List<Broker> getBrokers() { return referenceDataService.getBrokers(); }
+    public ResponseEntity<? extends ApiResponse<?>> getBrokers() {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.getBrokers()));
+    }
 
     @PostMapping("/brokers")
-    public ResponseEntity<Broker> createBroker(@RequestBody Broker broker) {
-        return ResponseEntity.ok(referenceDataService.createBroker(broker));
+    public ResponseEntity<? extends ApiResponse<?>> createBroker(@RequestBody Broker broker) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.createBroker(broker)));
     }
 
     @PutMapping("/brokers/{id}")
-    public ResponseEntity<Broker> updateBroker(@PathVariable Long id, @RequestBody Broker req) {
-        return ResponseEntity.ok(referenceDataService.updateBroker(id, req));
+    public ResponseEntity<? extends ApiResponse<?>> updateBroker(@PathVariable Long id, @RequestBody Broker req) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.updateBroker(id, req)));
     }
 
     // ── Accounts ─────────────────────────────────────────────────────────
     @GetMapping("/accounts")
-    public List<Account> getAccounts() { return referenceDataService.getAccounts(); }
+    public ResponseEntity<? extends ApiResponse<?>> getAccounts() {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.getAccounts()));
+    }
 
     @PostMapping("/accounts")
-    public ResponseEntity<Account> createAccount(@RequestBody Account account) {
-        return ResponseEntity.ok(referenceDataService.createAccount(account));
+    public ResponseEntity<? extends ApiResponse<?>> createAccount(@RequestBody Account account) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.createAccount(account)));
     }
 
     @PutMapping("/accounts/{id}")
-    public ResponseEntity<Account> updateAccount(@PathVariable Long id, @RequestBody Account req) {
-        return ResponseEntity.ok(referenceDataService.updateAccount(id, req));
+    public ResponseEntity<? extends ApiResponse<?>> updateAccount(@PathVariable Long id, @RequestBody Account req) {
+        return ResponseEntity.ok(new SuccessResponse<>(referenceDataService.updateAccount(id, req)));
     }
 }

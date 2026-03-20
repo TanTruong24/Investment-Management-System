@@ -1,6 +1,7 @@
 package com.gostock.controller;
 
-import com.gostock.dto.*;
+import com.gostock.dto.response.SuccessResponse;
+import com.gostock.dto.response.base.ApiResponse;
 import com.gostock.service.contract.AnalyticsServiceContract;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,13 +16,13 @@ public class AnalyticsController {
 
     /** Tổng quan danh mục: holdings, PnL, phân bổ, hiệu suất */
     @GetMapping("/portfolio/{accountId}")
-    public ResponseEntity<PortfolioSummaryResponse> portfolio(@PathVariable Long accountId) {
-        return ResponseEntity.ok(analyticsService.getSummary(accountId));
+    public ResponseEntity<? extends ApiResponse<?>> portfolio(@PathVariable Long accountId) {
+        return ResponseEntity.ok(new SuccessResponse<>(analyticsService.getSummary(accountId)));
     }
 
     /** Tóm tắt tiền mặt */
     @GetMapping("/cash/{accountId}")
-    public ResponseEntity<CashSummaryResponse> cashSummary(@PathVariable Long accountId) {
-        return ResponseEntity.ok(analyticsService.getCashSummary(accountId));
+    public ResponseEntity<? extends ApiResponse<?>> cashSummary(@PathVariable Long accountId) {
+        return ResponseEntity.ok(new SuccessResponse<>(analyticsService.getCashSummary(accountId)));
     }
 }

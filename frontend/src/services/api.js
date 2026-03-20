@@ -7,7 +7,26 @@ const api = axios.create({
   timeout: 15000
 })
 
-api.interceptors.response.use(response => response.data)
+api.interceptors.response.use((response) => {
+  const payload = response.data
+
+  // Unified API envelope:
+  // - SuccessResponse: { success, message, data, error, timestamp }
+  // - PagingResponse:  { success, message, data, error, timestamp, pagination }
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Object.prototype.hasOwnProperty.call(payload, 'success') &&
+    Object.prototype.hasOwnProperty.call(payload, 'data')
+  ) {
+    if (Object.prototype.hasOwnProperty.call(payload, 'pagination')) {
+      return payload
+    }
+    return payload.data
+  }
+
+  return payload
+})
 
 // ── Transactions ──────────────────────────────────────────────
 export const transactionApi = {

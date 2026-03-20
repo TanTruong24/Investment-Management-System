@@ -112,7 +112,7 @@ import { useTransactionStore } from '@/stores/transaction'
 
 const store = useTransactionStore()
 
-const filters = reactive({ tickerSymbol: '', trade: null, fromDate: null, toDate: null, accountId: null })
+const filters = reactive({ tickerSymbol: null, trade: null, fromDate: null, toDate: null, accountId: null })
 const currentPage = ref(1)
 const pageSize = ref(20)
 const sortField = ref('tradingDate')
@@ -133,7 +133,7 @@ async function search() {
 }
 
 function resetFilters() {
-  Object.assign(filters, { tickerSymbol: '', trade: null, fromDate: null, toDate: null, accountId: null })
+  Object.assign(filters, { tickerSymbol: null, trade: null, fromDate: null, toDate: null, accountId: null })
   search()
 }
 

@@ -14,8 +14,8 @@ export const useTransactionStore = defineStore('transaction', () => {
     loading.value = true
     try {
       const res = await transactionApi.list(params)
-      transactions.value = res.content
-      total.value = res.totalElements
+      transactions.value = Array.isArray(res?.data) ? res.data : []
+      total.value = Number(res?.pagination?.total ?? 0)
     } finally {
       loading.value = false
     }

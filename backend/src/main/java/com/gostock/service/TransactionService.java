@@ -1,6 +1,8 @@
 package com.gostock.service;
 
-import com.gostock.dto.*;
+import com.gostock.dto.TransactionRequest;
+import com.gostock.dto.TransactionResponse;
+import com.gostock.dto.response.PagingResponse;
 import com.gostock.entity.*;
 import com.gostock.entity.enums.*;
 import com.gostock.repository.*;
@@ -10,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -74,19 +76,17 @@ public class TransactionService implements TransactionServiceContract {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<TransactionResponse> search(String tickerSymbol, TradeType trade,
+    public PagingResponse<List<TransactionResponse>> search(String tickerSymbol, TradeType trade,
             LocalDate fromDate, LocalDate toDate,
             Long accountId, Pageable pageable) {
-        
-        int debug1 = 1;
-        System.out.println("HIT SERVICE SEARCH");
+
         List<Transaction> all = transactionRepo.search(tickerSymbol, trade, fromDate, toDate, accountId);
 
         // manual paging (vì JPQL + Pageable + countQuery phức tạp)
-        int start = (int) pageable.getOffset();
+        int start = Math.min((int) pageable.getOffset(), all.size());
         int end = Math.min(start + pageable.getPageSize(), all.size());
         List<TransactionResponse> page = all.subList(start, end).stream().map(this::toResponse).toList();
-        return new PageImpl<>(page, pageable, all.size());
+        return new PagingResponse<>(page, pageable.getPageNumber(), pageable.getPageSize(), all.size());
     }
 
     // ── Import từ Excel ───────────────────────────────────────────────────
