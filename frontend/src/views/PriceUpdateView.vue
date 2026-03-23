@@ -39,8 +39,13 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="submit">Cập nhật giá</el-button>
-          <el-button @click="resetForm">Reset</el-button>
+          <div class="action-row">
+            <el-button class="action-btn" type="primary" :loading="loading" @click="submit">Cập nhật giá</el-button>
+            <el-button class="action-btn" type="success" :loading="autoLoading" @click="refreshHeld">
+            Cập nhật mã đang giữ (Vietstock)
+            </el-button>
+            <el-button class="action-btn" @click="resetForm">Reset</el-button>
+          </div>
         </el-form-item>
       </el-form>
     </el-card>
@@ -56,6 +61,7 @@ import { ElMessage } from 'element-plus'
 const store   = useTransactionStore()
 const formRef = ref(null)
 const loading = ref(false)
+const autoLoading = ref(false)
 
 const form = ref({
   tickerSymbol: '', priceDate: null, closePrice: 0,
@@ -84,6 +90,18 @@ async function submit() {
   }
 }
 
+async function refreshHeld() {
+  autoLoading.value = true
+  try {
+    const res = await priceApi.refreshHeld()
+    ElMessage.success(`Đã cập nhật ${res.updatedCount} mã đang giữ`)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || 'Không cập nhật được giá tự động')
+  } finally {
+    autoLoading.value = false
+  }
+}
+
 function resetForm() {
   form.value = { tickerSymbol: '', priceDate: null, closePrice: 0, open: null, high: null, low: null, volume: null, source: 'MANUAL' }
   formRef.value?.clearValidate()
@@ -92,4 +110,32 @@ function resetForm() {
 
 <style scoped>
 .form-wrapper { max-width: 600px; }
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr 120px;
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.action-btn {
+  min-width: 0;
+  height: auto;
+  line-height: 1.2;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+:deep(.action-btn > span) {
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .action-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

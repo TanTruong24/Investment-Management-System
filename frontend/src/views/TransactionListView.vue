@@ -61,9 +61,15 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="volume" label="KL đặt" width="100" align="right"
+                         :formatter="(r) => r.volume?.toLocaleString('vi-VN')" />
+        <el-table-column prop="orderPrice" label="Giá đặt" width="120" align="right"
+                         :formatter="(r) => formatVND(r.orderPrice)" />
         <el-table-column prop="matchedVolume" label="KL khớp" width="100" align="right"
                          :formatter="(r) => r.matchedVolume?.toLocaleString('vi-VN')" />
-        <el-table-column prop="matchedValue" label="Giá khớp" width="120" align="right"
+        <el-table-column prop="matchedPrice" label="Giá khớp" width="120" align="right"
+                         :formatter="(r) => formatVND(r.matchedPrice)" />
+        <el-table-column prop="matchedValue" label="Giá trị khớp" width="140" align="right"
                          :formatter="(r) => formatVND(r.matchedValue)" />
         <el-table-column prop="fee" label="Phí" width="100" align="right"
                          :formatter="(r) => formatVND(r.fee)" />
@@ -79,6 +85,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="brokerCode" label="Broker" width="80" />
+        <el-table-column prop="channel" label="Kênh" width="100" />
+        <el-table-column prop="orderType" label="Loại lệnh" width="110" />
+        <el-table-column prop="orderNo" label="Số hiệu lệnh" min-width="170" />
         <el-table-column prop="status" label="Trạng thái" width="100">
           <template #default="{ row }">
             <el-tag type="info" size="small">{{ row.status }}</el-tag>

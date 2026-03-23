@@ -30,7 +30,8 @@ public class TransactionRequest {
     private BigDecimal orderPrice;      // Giá đặt (VNĐ)
 
     private Long matchedVolume;         // KL khớp (có thể null nếu chưa khớp)
-    private BigDecimal matchedValue;    // Giá khớp
+    private BigDecimal matchedPrice;    // Giá khớp
+    private BigDecimal matchedValue;    // Giá trị khớp
 
     private StockExchange stockExchange;
     private OrderType orderType;

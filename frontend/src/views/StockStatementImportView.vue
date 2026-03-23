@@ -31,7 +31,8 @@
         <el-table-column prop="tickerSymbol" label="Mã CP" width="90" />
         <el-table-column prop="trade" label="Loại" width="90" />
         <el-table-column prop="matchedVolume" label="Phát sinh KL" width="130" align="right" />
-        <el-table-column prop="matchedValue" label="Giá xấp xỉ" width="130" align="right" :formatter="(r) => formatVND(r.matchedValue)" />
+        <el-table-column prop="matchedPrice" label="Giá xấp xỉ" width="130" align="right" :formatter="(r) => formatVND(r.matchedPrice)" />
+        <el-table-column prop="matchedValue" label="Giá trị khớp" width="140" align="right" :formatter="(r) => formatVND(r.matchedValue)" />
         <el-table-column prop="note" label="Mô tả" min-width="220" />
       </el-table>
     </el-card>

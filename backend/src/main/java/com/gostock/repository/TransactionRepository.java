@@ -31,5 +31,27 @@ public interface TransactionRepository
             @Param("toDate") LocalDate toDate,
             @Param("accountId") Long accountId);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END
+        FROM Transaction t
+        WHERE t.account.id = :accountId
+          AND t.orderNo = :orderNo
+          AND t.tradingDate = :tradingDate
+          AND t.trade = :trade
+          AND t.ticker.symbol = :tickerSymbol
+          AND t.matchedVolume = :matchedVolume
+          AND t.matchedPrice = :matchedPrice
+          AND t.matchedValue = :matchedValue
+        """)
+    boolean existsByImportSignature(
+            @Param("accountId") Long accountId,
+            @Param("orderNo") String orderNo,
+            @Param("tradingDate") LocalDate tradingDate,
+            @Param("trade") TradeType trade,
+            @Param("tickerSymbol") String tickerSymbol,
+            @Param("matchedVolume") Long matchedVolume,
+            @Param("matchedPrice") java.math.BigDecimal matchedPrice,
+            @Param("matchedValue") java.math.BigDecimal matchedValue);
+
     boolean existsByOrderNoAndAccount_Id(String orderNo, Long accountId);
 }

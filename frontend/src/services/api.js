@@ -113,6 +113,11 @@ export const analyticsApi = {
 export const priceApi = {
   update(data) {
     return api.post('/prices', data)
+  },
+  refreshHeld(accountId = null) {
+    return api.post('/prices/refresh-held', null, {
+      params: accountId != null ? { accountId } : {}
+    })
   }
 }
 

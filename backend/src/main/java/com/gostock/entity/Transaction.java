@@ -71,20 +71,23 @@ public class Transaction {
     private Long matchedVolume;             // KL khớp
 
     @Column(precision = 20, scale = 2)
-    private BigDecimal matchedValue;        // Giá khớp (VNĐ)
+    private BigDecimal matchedPrice;        // Giá khớp (VNĐ)
+
+    @Column(precision = 20, scale = 2)
+    private BigDecimal matchedValue;        // Giá trị khớp (VNĐ)
 
     // ── Phí & thuế ──────────────────────────────────────────────────────
 
     /**
      * Phí giao dịch (VNĐ). Được tính từ fee rate của broker.
-     * = matchedVolume × matchedValue × feeRate
+     * = matchedVolume × matchedPrice × feeRate
      */
     @Column(precision = 20, scale = 2)
     private BigDecimal fee;
 
     /**
      * Thuế (VNĐ). Theo luật VN: 0.1% giá trị giao dịch khi bán.
-     * = matchedVolume × matchedValue × 0.001
+     * = matchedVolume × matchedPrice × 0.001
      */
     @Column(precision = 20, scale = 2)
     private BigDecimal tax;

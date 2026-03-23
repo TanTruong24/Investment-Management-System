@@ -165,15 +165,17 @@ public class TransactionService implements TransactionServiceContract {
             if (trade == null)
                 continue;
 
-            long volume = parseLongCell(row, 5, formatter, 0L);
-            if (volume <= 0) {
-                volume = parseLongCell(row, 3, formatter, 0L);
-            }
+            long volume = parseLongCell(row, 3, formatter, 0L);
             if (volume <= 0)
+                continue;
+
+            long matchedVol = parseLongCell(row, 5, formatter, 0L);
+            if (matchedVol <= 0)
                 continue;
 
             BigDecimal orderPrice = parseDecimalCell(row, 4, formatter, BigDecimal.ZERO);
             BigDecimal matchedPrice = parseDecimalCell(row, 6, formatter, BigDecimal.ZERO);
+            BigDecimal matchedValue = parseDecimalCell(row, 7, formatter, BigDecimal.ZERO);
             if (matchedPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 matchedPrice = orderPrice;
             }
@@ -182,13 +184,27 @@ public class TransactionService implements TransactionServiceContract {
             }
             if (matchedPrice.compareTo(BigDecimal.ZERO) <= 0)
                 continue;
+            if (matchedValue.compareTo(BigDecimal.ZERO) <= 0) {
+                matchedValue = matchedPrice.multiply(BigDecimal.valueOf(matchedVol));
+            }
 
             String orderNo = getCellString(row, 15, formatter);
             if (orderNo == null) {
                 orderNo = syntheticOrderNo("STX", tradingDate, symbol, trade, volume, i);
             }
-            if (transactionRepo.existsByOrderNoAndAccount_Id(orderNo, account.getId()))
+            // Stock history có thể có nhiều dòng cùng orderNo do khớp từng phần.
+            // Chỉ skip khi trùng toàn bộ "chữ ký" của dòng import.
+            if (transactionRepo.existsByImportSignature(
+                    account.getId(),
+                    orderNo,
+                    tradingDate,
+                    trade,
+                    symbol,
+                    matchedVol,
+                    matchedPrice,
+                    matchedValue)) {
                 continue;
+            }
 
             Ticker ticker = findOrCreateTicker(symbol, InstrumentType.STOCK);
 
@@ -198,9 +214,10 @@ public class TransactionService implements TransactionServiceContract {
             req.setTradingDate(tradingDate);
             req.setTrade(trade);
             req.setVolume(volume);
-            req.setMatchedVolume(volume);
+            req.setMatchedVolume(matchedVol);
             req.setOrderPrice(orderPrice);
-            req.setMatchedValue(matchedPrice);
+            req.setMatchedPrice(matchedPrice);
+            req.setMatchedValue(matchedValue);
             req.setFee(parseDecimalCell(row, 8, formatter, null));
             req.setTax(parseDecimalCell(row, 9, formatter, null));
             req.setChannel(getCellString(row, 12, formatter));
@@ -273,7 +290,8 @@ public class TransactionService implements TransactionServiceContract {
             req.setVolume(volume);
             req.setMatchedVolume(volume);
             req.setOrderPrice(unitPrice);
-            req.setMatchedValue(unitPrice);
+            req.setMatchedPrice(unitPrice);
+            req.setMatchedValue(unitPrice.multiply(BigDecimal.valueOf(volume)));
             req.setFee(BigDecimal.ZERO);
             req.setTax(BigDecimal.ZERO);
             req.setOrderType(OrderType.NORMAL);
@@ -337,7 +355,8 @@ public class TransactionService implements TransactionServiceContract {
             req.setVolume(volume);
             req.setMatchedVolume(volume);
             req.setOrderPrice(approxPrice);
-            req.setMatchedValue(approxPrice);
+            req.setMatchedPrice(approxPrice);
+            req.setMatchedValue(approxPrice.multiply(BigDecimal.valueOf(volume)));
             req.setFee(BigDecimal.ZERO);
             req.setTax(BigDecimal.ZERO);
             req.setOrderType(OrderType.NORMAL);
@@ -614,10 +633,9 @@ public class TransactionService implements TransactionServiceContract {
     // ── Internal helpers ──────────────────────────────────────────────────
 
     private Transaction buildTransaction(TransactionRequest req, Account account, Ticker ticker) {
-        BigDecimal matchedVol = BigDecimal
-                .valueOf(req.getMatchedVolume() != null ? req.getMatchedVolume() : req.getVolume());
-        BigDecimal matchedPrice = req.getMatchedValue() != null ? req.getMatchedValue() : req.getOrderPrice();
-        BigDecimal tradeValue = matchedVol.multiply(matchedPrice);
+        long matchedVolume = resolveMatchedVolume(req.getMatchedVolume(), req.getVolume());
+        BigDecimal matchedPrice = resolveMatchedPrice(req, matchedVolume);
+        BigDecimal tradeValue = resolveMatchedValue(req, matchedVolume, matchedPrice);
 
         BigDecimal fee = req.getFee() != null ? req.getFee()
                 : tradeValue.multiply(account.getBroker().getDefaultFeeRate()).setScale(0, RoundingMode.HALF_UP);
@@ -638,8 +656,9 @@ public class TransactionService implements TransactionServiceContract {
                 .trade(req.getTrade())
                 .volume(req.getVolume())
                 .orderPrice(req.getOrderPrice())
-                .matchedVolume(req.getMatchedVolume() != null ? req.getMatchedVolume() : req.getVolume())
-                .matchedValue(matchedPrice)
+                .matchedVolume(matchedVolume)
+                .matchedPrice(matchedPrice)
+                .matchedValue(tradeValue)
                 .stockExchange(req.getStockExchange())
                 .orderType(req.getOrderType())
                 .channel(req.getChannel())
@@ -658,12 +677,38 @@ public class TransactionService implements TransactionServiceContract {
         tx.setTrade(req.getTrade());
         tx.setVolume(req.getVolume());
         tx.setOrderPrice(req.getOrderPrice());
-        tx.setMatchedVolume(req.getMatchedVolume());
-        tx.setMatchedValue(req.getMatchedValue());
+        long matchedVolume = resolveMatchedVolume(req.getMatchedVolume(), req.getVolume());
+        BigDecimal matchedPrice = resolveMatchedPrice(req, matchedVolume);
+        tx.setMatchedVolume(matchedVolume);
+        tx.setMatchedPrice(matchedPrice);
+        tx.setMatchedValue(resolveMatchedValue(req, matchedVolume, matchedPrice));
         tx.setStockExchange(req.getStockExchange());
         tx.setOrderType(req.getOrderType());
         tx.setChannel(req.getChannel());
         tx.setNote(req.getNote());
+    }
+
+    private long resolveMatchedVolume(Long requestMatchedVolume, Long requestVolume) {
+        return requestMatchedVolume != null ? requestMatchedVolume : requestVolume;
+    }
+
+    private BigDecimal resolveMatchedPrice(TransactionRequest req, long matchedVolume) {
+        if (req.getMatchedPrice() != null && req.getMatchedPrice().compareTo(BigDecimal.ZERO) > 0) {
+            return req.getMatchedPrice();
+        }
+        if (req.getMatchedValue() != null
+                && req.getMatchedValue().compareTo(BigDecimal.ZERO) > 0
+                && matchedVolume > 0) {
+            return req.getMatchedValue().divide(BigDecimal.valueOf(matchedVolume), 2, RoundingMode.HALF_UP);
+        }
+        return req.getOrderPrice();
+    }
+
+    private BigDecimal resolveMatchedValue(TransactionRequest req, long matchedVolume, BigDecimal matchedPrice) {
+        if (req.getMatchedValue() != null && req.getMatchedValue().compareTo(BigDecimal.ZERO) > 0) {
+            return req.getMatchedValue();
+        }
+        return matchedPrice.multiply(BigDecimal.valueOf(matchedVolume));
     }
 
     /**
@@ -683,7 +728,7 @@ public class TransactionService implements TransactionServiceContract {
                         .build());
 
         long vol = tx.getMatchedVolume() != null ? tx.getMatchedVolume() : tx.getVolume();
-        BigDecimal price = tx.getMatchedValue() != null ? tx.getMatchedValue() : tx.getOrderPrice();
+        BigDecimal price = tx.getMatchedPrice() != null ? tx.getMatchedPrice() : tx.getOrderPrice();
 
         if (tx.getTrade() == TradeType.BUY) {
             BigDecimal oldTotal = pos.getAvgCost().multiply(BigDecimal.valueOf(pos.getHoldingVolume()));
@@ -703,7 +748,7 @@ public class TransactionService implements TransactionServiceContract {
             tx.setCost(pos.getAvgCost().multiply(BigDecimal.valueOf(vol)));
             transactionRepo.save(tx);
 
-            pos.setHoldingVolume(Math.max(0, pos.getHoldingVolume() - vol));
+            pos.setHoldingVolume(pos.getHoldingVolume() - vol);
         }
         positionRepo.saveAndFlush(pos);
     }
@@ -724,6 +769,7 @@ public class TransactionService implements TransactionServiceContract {
                 .volume(tx.getVolume())
                 .orderPrice(tx.getOrderPrice())
                 .matchedVolume(tx.getMatchedVolume())
+                .matchedPrice(tx.getMatchedPrice())
                 .matchedValue(tx.getMatchedValue())
                 .fee(tx.getFee())
                 .tax(tx.getTax())

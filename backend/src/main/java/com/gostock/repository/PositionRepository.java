@@ -17,4 +17,10 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
     List<Position> findActiveByAccountId(@Param("accountId") Long accountId);
 
     List<Position> findByAccount_IdAndHoldingVolumeGreaterThan(Long accountId, Long volume);
+
+    @Query("SELECT DISTINCT p.ticker.symbol FROM Position p WHERE p.holdingVolume > 0")
+    List<String> findDistinctHeldTickerSymbols();
+
+    @Query("SELECT DISTINCT p.ticker.symbol FROM Position p WHERE p.account.id = :accountId AND p.holdingVolume > 0")
+    List<String> findDistinctHeldTickerSymbolsByAccountId(@Param("accountId") Long accountId);
 }

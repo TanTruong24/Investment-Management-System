@@ -27,6 +27,7 @@ public class TransactionResponse {
     private Long volume;
     private BigDecimal orderPrice;
     private Long matchedVolume;
+    private BigDecimal matchedPrice;
     private BigDecimal matchedValue;
     private BigDecimal fee;
     private BigDecimal tax;
